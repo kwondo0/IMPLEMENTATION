@@ -1,5 +1,4 @@
-import { redirect } from "next/navigation";
-import { auth } from "@/auth";
+import { requireAdmin } from "@/lib/authz";
 import { changeOrderStatusAction, createCouponAction, createProductAction } from "@/app/actions";
 import { getProducts } from "@/lib/products";
 import { getRecentOrdersForAdmin } from "@/lib/orders";
@@ -12,9 +11,7 @@ const statusNames: Record<string, string> = {
 };
 
 export default async function AdminPage({ searchParams }: { searchParams: Promise<{ message?: string }> }) {
-  const session = await auth();
-  if (!session?.user) redirect("/login");
-  if (session.user.role !== "admin") redirect("/");
+  await requireAdmin();
   const [{ message }, products, orders] = await Promise.all([
     searchParams,
     getProducts(),

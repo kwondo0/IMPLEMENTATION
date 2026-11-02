@@ -9,14 +9,6 @@ import { Order } from "@/models/Order";
 import { Product } from "@/models/Product";
 import { decreaseStock } from "@/lib/products";
 
-const allowedTransitions: Record<string, string[]> = {
-  PENDING: ["PAID", "CANCELLED"],
-  PAID: ["SHIPPING", "CANCELLED"],
-  SHIPPING: ["DELIVERED"],
-  DELIVERED: [],
-  CANCELLED: [],
-};
-
 export async function createOrder(userId: string, couponId?: string) {
   await connectDB();
   const session = await mongoose.startSession();
@@ -108,17 +100,16 @@ export async function cancelOrder(orderId: string, userId: string) {
 export async function payOrder(orderId: string, userId: string) {
   await connectDB();
   const session = await mongoose.startSession();
-  let expired = false;
+  let expired: boolean | undefined;
   try {
-    await session.withTransaction(async () => {
+    expired = await session.withTransaction(async () => {
       const order = await Order.findOne({ _id: orderId, userId }).session(session);
       if (!order) throw new CommerceError("주문을 찾을 수 없습니다.");
       if (order.status !== "PENDING") throw new CommerceError("결제할 수 없는 주문 상태입니다.");
 
       if (Date.now() - order.createdAt.getTime() > 15 * 60 * 1000) {
         await cancelOrderInSession(orderId, userId, session, ["PENDING"]);
-        expired = true;
-        return;
+        return true;
       }
 
       const updated = await Order.findOneAndUpdate(
@@ -127,6 +118,7 @@ export async function payOrder(orderId: string, userId: string) {
         { new: true, session },
       );
       if (!updated) throw new CommerceError("주문 상태가 이미 변경되었습니다.");
+      return false;
     });
   } finally {
     await session.endSession();
@@ -135,7 +127,9 @@ export async function payOrder(orderId: string, userId: string) {
 }
 
 export async function changeOrderStatus(orderId: string, from: string, to: string) {
-  if (!allowedTransitions[from]?.includes(to)) throw new CommerceError("허용되지 않은 상태 변경입니다.");
+  if (!(from === "PAID" && to === "SHIPPING") && !(from === "SHIPPING" && to === "DELIVERED")) {
+    throw new CommerceError("허용되지 않은 상태 변경입니다.");
+  }
   await connectDB();
   const order = await Order.findOneAndUpdate(
     { _id: orderId, status: from },

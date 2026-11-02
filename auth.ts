@@ -16,7 +16,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       async authorize(credentials) {
         const email = typeof credentials.email === "string" ? credentials.email.trim().toLowerCase() : "";
         const password = typeof credentials.password === "string" ? credentials.password : "";
-        if (!email || !password) return null;
+        if (!email || email.length > 254 || !password || new TextEncoder().encode(password).length > 72) return null;
 
         await connectDB();
         const user = await User.findOne({ email }).select("+passwordHash");
