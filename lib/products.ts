@@ -29,6 +29,13 @@ export async function getProducts(): Promise<ProductSummary[]> {
   return [...featured, ...Array.from(stored.values(), toProductSummary)];
 }
 
+export async function getFeaturedProducts(): Promise<ProductSummary[]> {
+  await connectDB();
+  const documents = await Product.find({ _id: { $in: collection.map((item) => item.id) } }).lean();
+  const stored = new Map(documents.map((product) => [String(product._id), toProductSummary(product)]));
+  return collection.map((item) => stored.get(item.id) ?? item);
+}
+
 export async function getProduct(id: string): Promise<ProductSummary | null> {
   if (!/^[a-f\d]{24}$/i.test(id)) return null;
   await connectDB();
