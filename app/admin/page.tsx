@@ -1,5 +1,8 @@
 import { requireAdmin } from "@/lib/authz";
-import { changeOrderStatusAction, createCouponAction, createProductAction } from "@/app/actions";
+import { changeOrderStatusAction, createCouponAction, createProductAction, deleteProductAction, updateProductImageAction } from "@/app/actions";
+import { ProductImageInput } from "@/app/admin/product-image-input";
+import { ProductImage } from "@/app/storefront";
+import { maxProductImageBytes } from "@/lib/product-image";
 import { getProducts } from "@/lib/products";
 import { getRecentOrdersForAdmin } from "@/lib/orders";
 import { formatWon } from "@/lib/format";
@@ -9,6 +12,7 @@ export const dynamic = "force-dynamic";
 const statusNames: Record<string, string> = {
   PENDING: "결제 대기", PAID: "결제 완료", SHIPPING: "배송 중", DELIVERED: "배송 완료", CANCELLED: "취소",
 };
+const successMessages = new Set(["상품을 등록했습니다.", "상품을 삭제했습니다.", "상품 이미지를 수정했습니다.", "쿠폰을 발급했습니다.", "주문 상태를 변경했습니다."]);
 
 export default async function AdminPage({ searchParams }: { searchParams: Promise<{ message?: string }> }) {
   await requireAdmin();
@@ -17,12 +21,13 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
     getProducts(),
     getRecentOrdersForAdmin(),
   ]);
+  const success = typeof message === "string" && successMessages.has(message);
 
   return (
     <div className="container">
       <span className="eyebrow">Management</span><h1>관리자</h1>
       <p className="lead">상품·쿠폰을 관리하고 주문의 허용된 배송 상태를 변경합니다.</p>
-      {message && <p className="notice success" role="status">{message}</p>}
+      {typeof message === "string" && <p className={success ? "notice success" : "notice"} role={success ? "status" : "alert"}>{message}</p>}
       <div className="grid" style={{ alignItems: "start", marginTop: 24 }}>
         <section className="panel">
           <h2>상품 등록</h2>
@@ -30,6 +35,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
             <label>상품명<input name="name" maxLength={120} required /></label>
             <label>가격 (원)<input name="price" type="number" min="0" step="1" required /></label>
             <label>재고<input name="stock" type="number" min="0" step="1" required /></label>
+            <ProductImageInput maxBytes={maxProductImageBytes} />
             <button className="button" type="submit">상품 등록</button>
           </form>
         </section>
@@ -47,8 +53,37 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
       <div className="section-head"><div><span className="eyebrow">Inventory</span><h2 style={{ marginTop: 7 }}>등록 상품</h2></div></div>
       <section className="panel table-wrap">
         {products.length === 0 ? <p className="muted">등록된 상품이 없습니다.</p> : (
-          <table><thead><tr><th>상품명</th><th>가격</th><th>재고</th></tr></thead><tbody>
-            {products.map((product) => <tr key={product.id}><td>{product.name}</td><td>{formatWon(product.price)}</td><td>{product.stock}</td></tr>)}
+          <table><thead><tr><th>상품</th><th>가격</th><th>재고</th><th>관리</th></tr></thead><tbody>
+            {products.map((product) => (
+              <tr key={product.id}>
+                <td>
+                  <div className="inventory-product">
+                    {product.image && <div className="product-media inventory-thumb"><ProductImage product={product} sizes="48px" decorative /></div>}
+                    <strong>{product.name}</strong>
+                  </div>
+                </td>
+                <td>{formatWon(product.price)}</td>
+                <td>{product.stock}</td>
+                <td>
+                  <details className="inventory-action" name="inventory-action">
+                    <summary className="button secondary" aria-label={product.name + (product.image ? " 이미지 수정" : " 이미지 추가")}>{product.image ? "이미지 수정" : "이미지 추가"}</summary>
+                    <form className="form-grid" action={updateProductImageAction}>
+                      <input type="hidden" name="productId" value={product.id} />
+                      <ProductImageInput maxBytes={maxProductImageBytes} required />
+                      <button className="button" type="submit">이미지 저장</button>
+                    </form>
+                  </details>
+                  <details className="inventory-action" name="inventory-action">
+                    <summary className="button secondary" aria-label={product.name + " 삭제"}>삭제</summary>
+                    <form className="form-grid" action={deleteProductAction}>
+                      <input type="hidden" name="productId" value={product.id} />
+                      <p>매장에서 상품을 내립니다. 기존 주문 내역은 보존됩니다.</p>
+                      <button className="button danger" type="submit">삭제 확인</button>
+                    </form>
+                  </details>
+                </td>
+              </tr>
+            ))}
           </tbody></table>
         )}
       </section>

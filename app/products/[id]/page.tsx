@@ -41,10 +41,10 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
           {product.specs && <section className="product-specs"><h2>상품 사양</h2><dl>{product.specs.map(([key, value]) => <div key={key}><dt>{key}</dt><dd>{value}</dd></div>)}</dl></section>}
         </div>
       </section>
-      <section className="related-products" aria-labelledby="related-title">
+      {related.length > 0 && <section className="related-products" aria-labelledby="related-title">
         <div className="section-head"><h2 id="related-title">함께 둘러보기</h2><Link className="section-link" href="/products">전체 보기 <span aria-hidden="true">→</span></Link></div>
         <ProductGrid products={related} />
-      </section>
+      </section>}
     </div>
   );
 }

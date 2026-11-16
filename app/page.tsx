@@ -1,14 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ProductGrid } from "@/app/storefront";
-import { categories, type Category } from "@/lib/catalog";
+import { ProductGrid, ProductImage } from "@/app/storefront";
+import { categories } from "@/lib/catalog";
 import { getFeaturedProducts } from "@/lib/products";
-
-const categoryImages: Record<Category, string> = {
-  desk: "/store/keyboard.webp",
-  living: "/store/mug.webp",
-  stationery: "/store/notebook.webp",
-};
 
 export default async function HomePage() {
   const products = await getFeaturedProducts();
@@ -28,24 +22,27 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <section className="home-products" aria-labelledby="featured-title">
+      {products.length > 0 && <section className="home-products" aria-labelledby="featured-title">
         <div className="section-head">
           <h2 id="featured-title">추천 상품</h2>
           <Link className="section-link" href="/products">전체 보기 <span aria-hidden="true">→</span></Link>
         </div>
         <ProductGrid products={products} />
-      </section>
+      </section>}
 
       <section className="home-collections" aria-labelledby="collections-title">
         <div className="section-head"><h2 id="collections-title">카테고리별로 둘러보기</h2></div>
         <div className="collection-grid">
-          {categories.map((category) => (
-            <Link className={"collection-tile collection-" + category.id} href={"/category/" + category.id} key={category.id}>
-              <span className="collection-copy"><strong>{category.label}</strong><span>{category.description}</span></span>
-              <span className="collection-arrow" aria-hidden="true">↗</span>
-              <span className="collection-photo"><Image src={categoryImages[category.id]} alt="" fill sizes="(max-width: 680px) 145px, 33vw" /></span>
-            </Link>
-          ))}
+          {categories.map((category) => {
+            const product = products.find((item) => item.category === category.id && item.image);
+            return (
+              <Link className={"collection-tile collection-" + category.id} href={"/category/" + category.id} key={category.id}>
+                <span className="collection-copy"><strong>{category.label}</strong><span>{category.description}</span></span>
+                <span className="collection-arrow" aria-hidden="true">↗</span>
+                {product && <span className="collection-photo"><ProductImage product={product} sizes="(max-width: 680px) 145px, 33vw" decorative /></span>}
+              </Link>
+            );
+          })}
         </div>
       </section>
     </div>

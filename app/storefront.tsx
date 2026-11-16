@@ -17,7 +17,7 @@ export function StoreIcon({ name }: { name: "bag" | "user" | "search" | "box" })
 
 export function ProductImage({ product, sizes, decorative = false }: { product: Pick<ProductSummary, "image" | "name">; sizes: string; decorative?: boolean }) {
   return product.image
-    ? <Image src={product.image} alt={decorative ? "" : product.name} fill sizes={sizes} />
+    ? <Image src={product.image} alt={decorative ? "" : product.name} fill sizes={sizes} unoptimized={product.image.startsWith("/media/")} />
     : <div className="product-placeholder"><StoreIcon name="box" /><span>이미지 준비 중</span></div>;
 }
 

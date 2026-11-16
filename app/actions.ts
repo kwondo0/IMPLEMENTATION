@@ -3,6 +3,7 @@
 import bcrypt from 'bcryptjs'
 import { AuthError } from 'next-auth'
 import { redirect } from 'next/navigation'
+import { revalidatePath } from 'next/cache'
 import { signIn, signOut } from '@/auth'
 import { CommerceError } from '@/lib/commerce-error'
 import { connectDB } from '@/lib/mongodb'
@@ -15,7 +16,8 @@ import {
 } from '@/lib/orders'
 import { requireAdmin, requireUser } from '@/lib/authz'
 import { addCartItem } from '@/lib/cart'
-import { getProductForCart } from '@/lib/products'
+import { deleteProduct, findActiveProduct, getProductForCart, updateProductImage } from '@/lib/products'
+import { readProductImage } from '@/lib/product-image'
 import { Cart } from '@/models/Cart'
 import { Coupon } from '@/models/Coupon'
 import { Product } from '@/models/Product'
@@ -123,8 +125,9 @@ export async function updateCartItemAction(formData: FormData) {
     if (!/^[a-f\d]{24}$/i.test(productId))
       throw new CommerceError('상품을 찾을 수 없습니다.')
     await connectDB()
-    const product = await Product.findById(productId)
-    if (!product || qty > product.stock)
+    const product = await findActiveProduct(productId)
+    if (!product) throw new CommerceError('판매가 종료된 상품입니다.')
+    if (qty > product.stock)
       throw new CommerceError('요청한 수량이 현재 재고보다 많습니다.')
     const result = await Cart.updateOne(
       { userId: user.id, 'items.productId': product._id },
@@ -200,10 +203,37 @@ export async function createProductAction(formData: FormData) {
       throw new CommerceError('가격은 0 이상의 정수로 입력해 주세요.')
     if (!Number.isSafeInteger(stock) || stock < 0)
       throw new CommerceError('재고는 0 이상의 정수로 입력해 주세요.')
+    const image = await readProductImage(formData.get('image'))
     await connectDB()
-    await Product.create({ name, price, stock })
+    await Product.create({ name, price, stock, ...image })
   })
+  revalidatePath('/', 'layout')
   withMessage('/admin', '상품을 등록했습니다.')
+}
+
+export async function updateProductImageAction(formData: FormData) {
+  await handleCommerceAction('/admin', async () => {
+    await requireAdmin()
+    const productId = getString(formData, 'productId').toLowerCase()
+    if (!/^[a-f\d]{24}$/.test(productId)) throw new CommerceError('상품을 찾을 수 없습니다.')
+    const image = await readProductImage(formData.get('image'))
+    if (!image) throw new CommerceError('교체할 이미지 파일을 선택해 주세요.')
+    if (!(await updateProductImage(productId, image)))
+      throw new CommerceError('이미 삭제됐거나 존재하지 않는 상품입니다.')
+  })
+  revalidatePath('/', 'layout')
+  withMessage('/admin', '상품 이미지를 수정했습니다.')
+}
+
+export async function deleteProductAction(formData: FormData) {
+  await handleCommerceAction('/admin', async () => {
+    await requireAdmin()
+    const productId = getString(formData, 'productId').toLowerCase()
+    if (!/^[a-f\d]{24}$/.test(productId) || !(await deleteProduct(productId)))
+      throw new CommerceError('이미 삭제됐거나 존재하지 않는 상품입니다.')
+  })
+  revalidatePath('/', 'layout')
+  withMessage('/admin', '상품을 삭제했습니다.')
 }
 
 export async function createCouponAction(formData: FormData) {
