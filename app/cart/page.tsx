@@ -37,7 +37,7 @@ export default async function CartPage({ searchParams }: { searchParams: Promise
                 <div className="product-media cart-media"><ProductImage product={item} sizes="100px" /></div>
                 <div className="cart-item-copy">
                   {item.available ? <Link className="text-link" href={"/products/" + item.productId}>{item.name}</Link> : <strong>{item.name}</strong>}
-                  <p className="muted">{formatWon(item.unitPrice)} · {item.qty}개</p>
+                  <p className="muted">{item.available && formatWon(item.unitPrice) + " · "}{item.qty}개</p>
                   {item.qty > item.availableStock && <p className="item-warning">{item.availableStock ? "현재 최대 " + item.availableStock + "개 구매 가능" : item.available ? "품절" : "판매 종료"}</p>}
                   <div className="cart-item-controls">
                     {item.availableStock > 0 && <form className="inline-form" action={updateCartItemAction}>
@@ -48,7 +48,7 @@ export default async function CartPage({ searchParams }: { searchParams: Promise
                     <form action={removeCartItemAction}><input type="hidden" name="productId" value={item.productId} /><button className="remove-button" type="submit" aria-label={item.name + " 삭제"}>삭제</button></form>
                   </div>
                 </div>
-                <strong className="cart-item-price">{formatWon(item.subtotal)}</strong>
+                {item.available && <strong className="cart-item-price">{formatWon(item.subtotal)}</strong>}
               </article>
             ))}
           </section>
