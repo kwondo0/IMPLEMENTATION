@@ -2,9 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { addToCartAction } from "@/app/actions";
-import { ProductImage, StoreIcon } from "@/app/storefront";
+import { ProductGrid, ProductImage, StoreIcon } from "@/app/storefront";
 import { categoryLabel } from "@/lib/catalog";
-import { getProduct } from "@/lib/products";
+import { getFeaturedProducts, getProduct } from "@/lib/products";
 import { formatWon } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -13,6 +13,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
   const { id } = await params;
   const [product, session] = await Promise.all([getProduct(id), auth()]);
   if (!product) notFound();
+  const related = (await getFeaturedProducts()).filter((item) => item.id !== product.id).slice(0, 3);
 
   return (
     <div className="container">
@@ -39,6 +40,10 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
           </div>
           {product.specs && <section className="product-specs"><h2>상품 사양</h2><dl>{product.specs.map(([key, value]) => <div key={key}><dt>{key}</dt><dd>{value}</dd></div>)}</dl></section>}
         </div>
+      </section>
+      <section className="related-products" aria-labelledby="related-title">
+        <div className="section-head"><h2 id="related-title">함께 둘러보기</h2><Link className="section-link" href="/products">전체 보기 <span aria-hidden="true">→</span></Link></div>
+        <ProductGrid products={related} />
       </section>
     </div>
   );

@@ -15,27 +15,28 @@ export function StoreIcon({ name }: { name: "bag" | "user" | "search" | "box" })
   );
 }
 
-export function ProductImage({ product, sizes }: { product: Pick<ProductSummary, "image" | "name">; sizes: string }) {
+export function ProductImage({ product, sizes, decorative = false }: { product: Pick<ProductSummary, "image" | "name">; sizes: string; decorative?: boolean }) {
   return product.image
-    ? <Image src={product.image} alt={product.name} fill sizes={sizes} />
+    ? <Image src={product.image} alt={decorative ? "" : product.name} fill sizes={sizes} />
     : <div className="product-placeholder"><StoreIcon name="box" /><span>이미지 준비 중</span></div>;
 }
 
-export function ProductGrid({ products }: { products: ProductSummary[] }) {
+export function ProductGrid({ products, heading: Heading = "h3" }: { products: ProductSummary[]; heading?: "h2" | "h3" }) {
   return (
     <ul className="product-grid">
       {products.map((product) => (
         <li key={product.id}>
           <Link className="store-product" href={"/products/" + product.id}>
             <div className="product-media">
-              <ProductImage product={product} sizes="(max-width: 680px) 48vw, (max-width: 1020px) 33vw, 280px" />
+              <ProductImage product={product} sizes="(max-width: 680px) 48vw, (max-width: 1020px) 33vw, 295px" decorative />
               {product.stock === 0 && <span className="stock-overlay">품절</span>}
             </div>
             <div className="product-copy">
               <p className="product-category">{categoryLabel(product.category)}</p>
-              <h3>{product.name}</h3>
+              <Heading>{product.name}</Heading>
               {product.subtitle && <p className="product-subtitle">{product.subtitle}</p>}
               <strong>{formatWon(product.price)}</strong>
+              <span className="product-arrow" aria-hidden="true">↗</span>
             </div>
           </Link>
         </li>
