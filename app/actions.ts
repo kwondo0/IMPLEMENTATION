@@ -6,7 +6,7 @@ import { redirect } from 'next/navigation'
 import { signIn, signOut } from '@/auth'
 import { CommerceError } from '@/lib/commerce-error'
 import { connectDB } from '@/lib/mongodb'
-import { parsePositiveInteger, getRawString, getString } from '@/lib/format'
+import { parsePositiveInteger, getRawString, getString, shoppingReturnPath } from '@/lib/format'
 import {
   createOrder,
   cancelOrder,
@@ -14,6 +14,8 @@ import {
   changeOrderStatus,
 } from '@/lib/orders'
 import { requireAdmin, requireUser } from '@/lib/authz'
+import { addCartItem } from '@/lib/cart'
+import { getProductForCart } from '@/lib/products'
 import { Cart } from '@/models/Cart'
 import { Coupon } from '@/models/Coupon'
 import { Product } from '@/models/Product'
@@ -35,13 +37,22 @@ async function handleCommerceAction(path: string, action: () => Promise<void>) {
 export async function loginAction(formData: FormData) {
   const email = getString(formData, 'email').toLowerCase()
   const password = getRawString(formData, 'password')
+  const product = getString(formData, 'product')
+  const destination = getString(formData, 'destination')
+  const returnPath = shoppingReturnPath(product, destination)
+  const loginError = (message: string): never => {
+    const params = new URLSearchParams({ message })
+    if (returnPath.startsWith('/products/')) params.set('product', product)
+    if (returnPath === '/cart' || returnPath === '/orders') params.set('destination', destination)
+    redirect('/login?' + params.toString())
+  }
   if (!email || !password)
-    withMessage('/login', '이메일과 비밀번호를 입력해 주세요.')
+    loginError('이메일과 비밀번호를 입력해 주세요.')
   try {
-    await signIn('credentials', { email, password, redirectTo: '/orders' })
+    await signIn('credentials', { email, password, redirectTo: returnPath })
   } catch (error) {
     if (error instanceof AuthError)
-      withMessage('/login', '이메일 또는 비밀번호를 확인해 주세요.')
+      loginError('이메일 또는 비밀번호를 확인해 주세요.')
     throw error
   }
 }
@@ -56,7 +67,7 @@ export async function registerAction(formData: FormData) {
   const password = getRawString(formData, 'password')
   if (name.length < 2 || name.length > 60)
     withMessage('/register', '이름은 2~60자로 입력해 주세요.')
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+  if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
     withMessage('/register', '올바른 이메일을 입력해 주세요.')
   if (password.length < 8 || new TextEncoder().encode(password).length > 72) {
     withMessage(
@@ -81,7 +92,7 @@ export async function registerAction(formData: FormData) {
     throw error
   }
   try {
-    await signIn('credentials', { email, password, redirectTo: '/products' })
+    await signIn('credentials', { email, password, redirectTo: shoppingReturnPath(getString(formData, 'product')) })
   } catch (error) {
     if (error instanceof AuthError)
       withMessage('/login', '가입은 완료되었습니다. 로그인해 주세요.')
@@ -92,26 +103,14 @@ export async function registerAction(formData: FormData) {
 export async function addToCartAction(formData: FormData) {
   await handleCommerceAction('/cart', async () => {
     const user = await requireUser()
-    const productId = getString(formData, 'productId')
+    const productId = getString(formData, 'productId').toLowerCase()
     const qty = parsePositiveInteger(getString(formData, 'qty') || '1', '수량')
     if (!/^[a-f\d]{24}$/i.test(productId))
       throw new CommerceError('상품을 찾을 수 없습니다.')
     await connectDB()
-    const product = await Product.findById(productId)
+    const product = await getProductForCart(productId)
     if (!product) throw new CommerceError('상품을 찾을 수 없습니다.')
-
-    const cart =
-      (await Cart.findOne({ userId: user.id })) ??
-      new Cart({ userId: user.id, items: [] })
-    const existing = cart.items.find(
-      (item) => String(item.productId) === productId,
-    )
-    const nextQty = (existing?.qty ?? 0) + qty
-    if (nextQty > product.stock)
-      throw new CommerceError('요청한 수량이 현재 재고보다 많습니다.')
-    if (existing) existing.qty = nextQty
-    else cart.items.push({ productId: product._id, qty })
-    await cart.save()
+    await addCartItem(user.id, product._id, qty)
   })
   withMessage('/cart', '장바구니에 담았습니다.')
 }
@@ -171,7 +170,7 @@ export async function payOrderAction(formData: FormData) {
       throw new CommerceError('주문을 찾을 수 없습니다.')
     await payOrder(orderId, user.id)
     redirect(
-      `/orders/${orderId}?message=${encodeURIComponent('가짜 결제가 완료되었습니다.')}`,
+      `/orders/${orderId}?message=${encodeURIComponent('모의 결제가 완료되었습니다.')}`,
     )
   })
 }

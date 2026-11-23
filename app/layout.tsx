@@ -1,48 +1,41 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { auth } from "@/auth";
-import { logoutAction } from "@/app/actions";
+import { categories } from "@/lib/catalog";
+import { StoreIcon } from "@/app/storefront";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "SecureCommerce",
-  description: "안전한 주문과 재고 관리를 위한 학습용 커머스",
+  title: { default: "SecureCommerce | 데스크와 일상을 위한 셀렉트숍", template: "%s | SecureCommerce" },
+  description: "키보드, 조명, 생활용품과 문구까지. 데스크와 일상을 위한 물건을 모았습니다.",
 };
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const session = await auth();
-
   return (
     <html lang="ko">
       <body>
+        <a className="skip-link" href="#main">본문 바로가기</a>
         <header className="site-header">
           <div className="header-inner">
-            <Link className="brand" href="/">SecureCommerce</Link>
-            <nav className="nav" aria-label="주 메뉴">
-              <Link href="/products">상품</Link>
-              {session?.user ? (
-                <>
-                  <Link href="/cart">장바구니</Link>
-                  <Link href="/orders">주문</Link>
-                  {session.user.role === "admin" && <Link href="/admin">관리자</Link>}
-                  <span>{session.user.name ?? session.user.email}</span>
-                  <form action={logoutAction}>
-                    <button type="submit">로그아웃</button>
-                  </form>
-                </>
-              ) : (
-                <>
-                  <Link href="/login">로그인</Link>
-                  <Link href="/register">회원가입</Link>
-                </>
-              )}
+            <Link className="brand" href="/">Secure<span>Commerce</span></Link>
+            <nav className="nav store-nav" aria-label="상품 카테고리">
+              <Link href="/products">전체 상품</Link>
+              {categories.map((category) => <Link href={"/category/" + category.id} key={category.id}>{category.label}</Link>)}
+            </nav>
+            <nav className="nav header-tools" aria-label="쇼핑 메뉴">
+              <Link href="/products#shop-search" aria-label="상품 검색" title="상품 검색"><StoreIcon name="search" /></Link>
+              <Link href={session?.user ? "/mypage" : "/login"} aria-label={session?.user ? "마이페이지" : "로그인"} title={session?.user ? "마이페이지" : "로그인"}><StoreIcon name="user" /></Link>
+              <Link href="/cart" aria-label="장바구니" title="장바구니"><StoreIcon name="bag" /></Link>
             </nav>
           </div>
         </header>
-        <main>{children}</main>
+        <main id="main">{children}</main>
         <footer className="footer">
-          <div className="container" style={{ paddingTop: 0, paddingBottom: 0 }}>
-            SecureCommerce · 수업 프로젝트용 데모 결제
+          <div className="footer-inner">
+            <div><Link className="brand" href="/">Secure<span>Commerce</span></Link><p>데스크와 일상을 위한 셀렉트숍</p></div>
+            <nav aria-label="하단 메뉴"><Link href="/products">전체 상품</Link><Link href="/orders">주문 내역</Link><Link href="/cart">장바구니</Link></nav>
+            <p className="footer-disclosure">멋사CP 팀 프로젝트 · 결제와 배송은 시뮬레이션입니다.</p>
           </div>
         </footer>
       </body>
