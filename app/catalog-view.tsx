@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Form from "next/form";
 import { ProductGrid, StoreIcon } from "@/app/storefront";
 import { categories, type Category } from "@/lib/catalog";
 import { getProducts } from "@/lib/products";
@@ -36,13 +37,16 @@ export async function CatalogView({ category, pathname, search }: {
           <Link key={tab.id} href={(tab.id ? "/category/" + tab.id : "/products") + suffix} aria-current={tab.id === (category ?? "") ? "page" : undefined}>{tab.label}</Link>
         ))}
       </nav>
-      <form className="catalog-tools" action={pathname} id="shop-search">
+      <Form className="catalog-tools" action={pathname} id="shop-search" key={query + "\u0000" + sort}>
         <label><span>상품 검색</span><input type="search" name="q" defaultValue={query} maxLength={80} placeholder="상품명 또는 특징" /></label>
         <label><span>정렬</span><select name="sort" defaultValue={sort}><option value="">추천순</option><option value="price-low">낮은 가격순</option><option value="price-high">높은 가격순</option></select></label>
         <button className="button" type="submit"><StoreIcon name="search" />검색</button>
-      </form>
-      <p className="result-count">{query && <strong>‘{query}’ 검색 결과 · </strong>}{products.length}개 상품</p>
-      {products.length > 0 ? <ProductGrid products={products} /> : (
+      </Form>
+      <div className="catalog-results">
+        <p className="result-count" role="status">{query && <strong>‘{query}’ 검색 결과 · </strong>}{products.length}개 상품</p>
+        {(query || sort) && <Link className="section-link" href={pathname}>초기화 <span aria-hidden="true">↺</span></Link>}
+      </div>
+      {products.length > 0 ? <ProductGrid products={products} heading="h2" /> : (
         <section className="panel empty-state">
           <StoreIcon name="search" /><h2>조건에 맞는 상품이 없습니다</h2><p className="muted">검색어를 바꾸거나 전체 상품을 둘러보세요.</p>
           <Link className="button secondary" href="/products">전체 상품 보기</Link>
