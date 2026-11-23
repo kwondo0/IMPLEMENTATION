@@ -1,33 +1,39 @@
+import Image from "next/image";
 import Link from "next/link";
+import { ProductGrid } from "@/app/storefront";
+import { categories, collection } from "@/lib/catalog";
 import { getProducts } from "@/lib/products";
 
 export default async function HomePage() {
-  const products = await getProducts();
-
+  const products = (await getProducts()).slice(0, collection.length);
   return (
-    <div className="container">
-      <section className="hero">
-        <div className="hero-copy">
-          <span className="eyebrow">Secure by design</span>
-          <h1>안심할 수 있는<br />온라인 쇼핑의 기본</h1>
-          <p className="lead">안전한 결제, 재고 관리, 쿠폰 적용까지 한 번에 준비된 쇼핑 경험을 제공합니다.</p>
-          <div className="actions"><Link className="button" href="/products">상품 둘러보기</Link></div>
+    <div className="container home">
+      <section className="store-hero" aria-labelledby="collection-title">
+        <div className="store-hero-copy">
+          <p className="hero-kicker">THE DESK EDIT</p>
+          <h1 id="collection-title">일하는 자리,<br />머무는 공간.</h1>
+          <p>아침을 여는 머그부터 저녁을 밝히는 조명까지.<br className="desktop-break" /> 곁에 오래 두고 싶은 물건을 모았습니다.</p>
+          <Link className="hero-cta" href="/category/desk">데스크 컬렉션 보기 <span aria-hidden="true">↗</span></Link>
         </div>
-        <aside className="hero-note">
-          <div><span className="pill">안전한 주문</span><h2 style={{ marginTop: 18 }}>가격과 권한을<br />서버에서 다시 확인합니다.</h2></div>
-          <p className="muted">재고 관리 · 쿠폰 적용 · 주문 처리</p>
-        </aside>
+        <div className="hero-media">
+          <Image src="/store/hero.webp" alt="월넛 책상 위 크롬 조명과 키보드, 세라믹 머그" fill preload sizes="(max-width: 740px) 100vw, 58vw" />
+        </div>
       </section>
-      <div className="section-head"><div><span className="eyebrow">Featured</span><h2 style={{ marginTop: 7 }}>추천 상품</h2></div><Link className="button secondary" href="/products">전체 상품</Link></div>
-      {products.length === 0 ? <div className="panel muted">아직 등록된 상품이 없습니다. 관리자가 상품을 등록하면 이곳에 표시됩니다.</div> : (
-        <div className="grid">{products.slice(0, 4).map((product) => (
-          <Link className="card product-card" href={`/products/${product.id}`} key={product.id}>
-            <span className="pill">{product.stock > 0 ? `재고 ${product.stock}개` : "품절"}</span>
-            <h2>{product.name}</h2><p className="muted">가볍게 둘러보고 바로 쇼핑해보세요.</p>
-            <span className="price">{product.price.toLocaleString("ko-KR")}원</span>
+      <nav className="collection-nav" aria-label="컬렉션 둘러보기">
+        {categories.map((category) => (
+          <Link href={"/category/" + category.id} key={category.id}>
+            <span><strong>{category.label}</strong><small>{category.description}</small></span>
+            <span aria-hidden="true">↗</span>
           </Link>
-        ))}</div>
-      )}
+        ))}
+      </nav>
+      <section className="home-products" aria-labelledby="featured-title">
+        <div className="section-head">
+          <h2 id="featured-title">추천 상품</h2>
+          <Link className="text-link" href="/products">전체 상품 <span aria-hidden="true">→</span></Link>
+        </div>
+        <ProductGrid products={products} />
+      </section>
     </div>
   );
 }
