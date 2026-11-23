@@ -1,7 +1,7 @@
 import mongoose, { type Types } from "mongoose";
 import { CommerceError } from "@/lib/commerce-error";
 import { connectDB } from "@/lib/mongodb";
-import { collection } from "@/lib/catalog";
+import { findActiveProduct, productImageSource } from "@/lib/products";
 import { Cart } from "@/models/Cart";
 import { Product } from "@/models/Product";
 
@@ -15,15 +15,16 @@ export async function getCartDetails(userId: string) {
 
   return cart.items.map((item) => {
     const product = productMap.get(String(item.productId));
+    const activeProduct = product?.deletedAt ? undefined : product;
     return {
       productId: String(item.productId),
       name: product?.name ?? "삭제된 상품",
-      unitPrice: product?.price ?? 0,
-      availableStock: product?.stock ?? 0,
+      unitPrice: activeProduct?.price ?? 0,
+      availableStock: activeProduct?.stock ?? 0,
       qty: item.qty,
-      subtotal: (product?.price ?? 0) * item.qty,
-      available: Boolean(product),
-      image: collection.find((entry) => entry.id === String(item.productId))?.image,
+      subtotal: (activeProduct?.price ?? 0) * item.qty,
+      available: Boolean(activeProduct),
+      image: activeProduct && productImageSource(String(item.productId), activeProduct.imageVersion),
     };
   });
 }
@@ -34,7 +35,7 @@ export async function addCartItem(userId: string, productId: Types.ObjectId, qty
   try {
     await session.withTransaction(async () => {
       const cart = await Cart.findOne({ userId }).session(session);
-      const product = await Product.findById(productId).session(session);
+      const product = await findActiveProduct(productId).session(session);
       if (!cart || !product) throw new CommerceError("장바구니에 상품을 담을 수 없습니다.");
       const existing = cart.items.find((item) => item.productId.equals(productId));
       const nextQty = (existing?.qty ?? 0) + qty;

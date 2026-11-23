@@ -7,7 +7,7 @@ import { Cart } from "@/models/Cart";
 import { Coupon } from "@/models/Coupon";
 import { Order } from "@/models/Order";
 import { Product } from "@/models/Product";
-import { decreaseStock } from "@/lib/products";
+import { decreaseStock, findActiveProduct } from "@/lib/products";
 
 export async function createOrder(userId: string, couponId?: string) {
   await connectDB();
@@ -21,8 +21,8 @@ export async function createOrder(userId: string, couponId?: string) {
 
       const items: { productId: mongoose.Types.ObjectId; name: string; price: number; qty: number }[] = [];
       for (const cartItem of cart.items) {
-        const product = await Product.findById(cartItem.productId).session(session);
-        if (!product) throw new CommerceError("장바구니에 없는 상품이 포함되어 있습니다.");
+        const product = await findActiveProduct(cartItem.productId).session(session);
+        if (!product) throw new CommerceError("판매가 종료된 상품을 장바구니에서 삭제해 주세요.");
         if (!Number.isSafeInteger(cartItem.qty) || cartItem.qty < 1) {
           throw new CommerceError("장바구니 수량이 올바르지 않습니다.");
         }

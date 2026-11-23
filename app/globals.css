@@ -33,6 +33,7 @@ h2 { margin: 0 0 16px; font-size: 22px; letter-spacing: -.03em; }
 .button:hover { background: var(--accent-dark); }
 .button.secondary { background: #eff0f6; color: var(--ink); }
 .button.danger { background: #a73939; }
+.button.danger:hover { background: #8d3030; }
 .button:disabled { opacity: .55; cursor: not-allowed; }
 .actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
 .stack { display: grid; gap: 14px; }
@@ -52,6 +53,13 @@ input:focus, select:focus { outline: 2px solid #bab4f8; border-color: var(--acce
 table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
 th, td { padding: 13px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
 th { color: var(--muted); font-size: 12px; }
+.inventory-product { display: flex; align-items: center; gap: 10px; }
+.inventory-thumb { width: 48px; aspect-ratio: 1; border-radius: 8px; flex: none; }
+.inventory-action { display: inline-block; vertical-align: top; margin: 2px 8px 2px 0; }
+.inventory-action > summary::-webkit-details-marker { display: none; }
+.inventory-action > form { margin-top: 8px; padding: 12px; width: min(250px, 70vw); border: 1px solid var(--line); border-radius: 10px; white-space: normal; }
+.inventory-action > form p { font-size: 14px; color: var(--muted); }
+input[type="file"]::file-selector-button { margin-right: 8px; padding: 3px 8px; background: var(--accent-soft); border-radius: 6px; cursor: pointer; }
 .auth-card { max-width: 480px; margin: 20px auto; }
 .footer { padding: 24px 0; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
 @media (max-width: 700px) {
